@@ -1,6 +1,6 @@
 # TraceStax .NET SDK
 
-Official .NET SDK for [TraceStax](https://tracestax.com) — Worker Intelligence Platform.
+Official .NET SDK for [TraceStax](https://tracestax.com) - Worker Intelligence Platform.
 
 TraceStax collects job and task lifecycle events from background job frameworks so
 you can monitor worker health, queue depth, and job success/failure rates in one
@@ -51,7 +51,7 @@ using TraceStax.Hangfire;
 
 var client = new TraceStaxClient(apiKey: "ts_live_xxxxxxxxxxxxxxxx");
 
-// Register globally — applies to every job processed by this server.
+// Register globally - applies to every job processed by this server.
 GlobalJobFilters.Filters.Add(new TraceStaxJobFilter(client));
 ```
 
@@ -84,7 +84,7 @@ execution, such as exceeded retry limits).
 
 ---
 
-## Plain .NET — manual instrumentation
+## Plain .NET - manual instrumentation
 
 Use `TraceStaxClient` directly when you are not using Hangfire or want fine-
 grained control.
@@ -189,4 +189,4 @@ all threads, background services, and job workers in a process. The internal
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).
