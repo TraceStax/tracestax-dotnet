@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Package metadata -->
+    <PackageId>TraceStax</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>TraceStax</Authors>
+    <Description>Official .NET SDK for TraceStax — Worker Intelligence Platform. Collects job/task lifecycle events from background job frameworks.</Description>
+    <PackageTags>tracestax;worker;monitoring;hangfire;background-jobs;observability</PackageTags>
+    <PackageProjectUrl>https://tracestax.com</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/tracestax/tracestax-dotnet</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- Source layout -->
+    <RootNamespace>TraceStax</RootNamespace>
+    <AssemblyName>TraceStax</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <!-- Prevent the test project files from being compiled by the library project -->
+    <Compile Remove="tests/**/*.cs" />
+  </ItemGroup>
+
+  <!--
+    Integration dependencies.
+
+    All three packages are declared as direct references so that the types they
+    expose (IServerFilter, IConsumeObserver, IHostedService, IServiceCollection)
+    are available at compile-time in the corresponding sub-namespace source files.
+
+    PrivateAssets="none" (the default) means the references flow to consumers
+    as transitive dependencies, which is the correct behaviour for an SDK that
+    ships integration code: a consumer that uses TraceStaxJobFilter already has
+    Hangfire installed, and the package reference simply confirms the minimum
+    compatible version.
+
+    Callers that do not use a particular integration (e.g. they only use
+    TraceStaxClient directly) will still receive the package references in their
+    lock file but the assemblies themselves will be included only if their own
+    code references types from them.
+  -->
+  <ItemGroup>
+    <!-- Hangfire.Core provides IServerFilter / IElectStateFilter -->
+    <PackageReference Include="Hangfire.Core" Version="1.8.0" />
+
+    <!-- MassTransit provides IConsumeObserver / IBusControl -->
+    <PackageReference Include="MassTransit" Version="8.2.1" />
+
+    <!-- Microsoft.Extensions.Hosting.Abstractions provides BackgroundService / IHostedService -->
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
+
+    <!-- Microsoft.Extensions.DependencyInjection.Abstractions provides IServiceCollection -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,14 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine
+
+WORKDIR /sdk
+
+# Restore dependencies for both projects
+COPY TraceStax.csproj .
+COPY tests/TraceStax.Tests.csproj tests/
+RUN dotnet restore TraceStax.csproj && dotnet restore tests/TraceStax.Tests.csproj
+
+# Copy source
+COPY src/ src/
+COPY tests/ tests/
+
+CMD ["dotnet", "test", "tests/TraceStax.Tests.csproj", "--logger", "console;verbosity=normal", "--no-restore"]

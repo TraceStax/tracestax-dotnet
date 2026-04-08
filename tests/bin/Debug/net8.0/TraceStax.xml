@@ -1,0 +1,331 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>TraceStax</name>
+    </assembly>
+    <members>
+        <member name="T:TraceStax.Extensions.TraceStaxBackgroundService">
+             <summary>
+             Abstract base class for hosted background services that automatically tracks
+             each job invocation with TraceStax.
+             </summary>
+             <remarks>
+             Subclasses implement <see cref="M:TraceStax.Extensions.TraceStaxBackgroundService.ExecuteJobAsync(System.Threading.CancellationToken)"/> rather than
+             <see cref="M:Microsoft.Extensions.Hosting.BackgroundService.ExecuteAsync(System.Threading.CancellationToken)"/>. The base class wraps each
+             invocation with <c>TrackStart</c> / <c>TrackSuccess</c> / <c>TrackFailure</c>
+             calls so instrumentation requires no boilerplate in the derived class.
+            
+             <para>For periodic workloads prefer <see cref="T:TraceStax.Extensions.TraceStaxPeriodicBackgroundService"/>
+             which additionally handles the wait interval between ticks.</para>
+             </remarks>
+        </member>
+        <member name="P:TraceStax.Extensions.TraceStaxBackgroundService.TraceStaxClient">
+            <summary>Gets the <see cref="P:TraceStax.Extensions.TraceStaxBackgroundService.TraceStaxClient"/> used for instrumentation.</summary>
+        </member>
+        <member name="P:TraceStax.Extensions.TraceStaxBackgroundService.JobName">
+            <summary>
+            Gets the logical name of the job, used as the task type on the
+            TraceStax dashboard (e.g. <c>"OrderExpiryJob"</c>).
+            </summary>
+        </member>
+        <member name="P:TraceStax.Extensions.TraceStaxBackgroundService.QueueName">
+            <summary>
+            Gets the queue or worker-group name reported to TraceStax
+            (e.g. <c>"critical"</c>, <c>"default"</c>).
+            </summary>
+        </member>
+        <member name="M:TraceStax.Extensions.TraceStaxBackgroundService.#ctor(TraceStax.TraceStaxClient)">
+            <summary>
+            Initialises the base class.
+            </summary>
+            <param name="client">Configured <see cref="P:TraceStax.Extensions.TraceStaxBackgroundService.TraceStaxClient"/> instance.</param>
+        </member>
+        <member name="M:TraceStax.Extensions.TraceStaxBackgroundService.ExecuteJobAsync(System.Threading.CancellationToken)">
+            <summary>
+            Implement this method to perform one unit of work.  The base class calls
+            it in a loop from <see cref="M:TraceStax.Extensions.TraceStaxBackgroundService.ExecuteAsync(System.Threading.CancellationToken)"/> and handles all tracking.
+            </summary>
+            <param name="ct">Token that is cancelled when the host is stopping.</param>
+        </member>
+        <member name="M:TraceStax.Extensions.TraceStaxBackgroundService.ExecuteAsync(System.Threading.CancellationToken)">
+            <summary>
+            Runs the service loop.  Derived classes that need a custom loop
+            strategy (e.g. event-driven) may override this, but most should
+            implement <see cref="M:TraceStax.Extensions.TraceStaxBackgroundService.ExecuteJobAsync(System.Threading.CancellationToken)"/> instead.
+            </summary>
+        </member>
+        <member name="M:TraceStax.Extensions.TraceStaxBackgroundService.RunTrackedAsync(System.Threading.CancellationToken)">
+            <summary>
+            Executes one <see cref="M:TraceStax.Extensions.TraceStaxBackgroundService.ExecuteJobAsync(System.Threading.CancellationToken)"/> invocation wrapped in
+            TraceStax tracking.  Cancellation is re-thrown so the loop in
+            <see cref="M:TraceStax.Extensions.TraceStaxBackgroundService.ExecuteAsync(System.Threading.CancellationToken)"/> can exit cleanly.
+            </summary>
+        </member>
+        <member name="T:TraceStax.Extensions.TraceStaxPeriodicBackgroundService">
+             <summary>
+             A <see cref="T:TraceStax.Extensions.TraceStaxBackgroundService"/> that uses a <see cref="T:System.Threading.PeriodicTimer"/>
+             to run <see cref="M:TraceStax.Extensions.TraceStaxBackgroundService.ExecuteJobAsync(System.Threading.CancellationToken)"/> on a fixed interval.
+             </summary>
+             <remarks>
+             <code>
+             public class MyJob : TraceStaxPeriodicBackgroundService
+             {
+                 public MyJob(TraceStaxClient client)
+                     : base(client, interval: TimeSpan.FromMinutes(5)) { }
+            
+                 protected override string JobName  => "MyJob";
+                 protected override string QueueName => "default";
+            
+                 protected override async Task ExecuteJobAsync(CancellationToken ct)
+                 {
+                     // do work …
+                 }
+             }
+             </code>
+             </remarks>
+        </member>
+        <member name="M:TraceStax.Extensions.TraceStaxPeriodicBackgroundService.#ctor(TraceStax.TraceStaxClient,System.TimeSpan)">
+            <summary>
+            Initialises the periodic background service.
+            </summary>
+            <param name="client">Configured <see cref="T:TraceStax.TraceStaxClient"/> instance.</param>
+            <param name="interval">How long to wait between each invocation of <see cref="M:TraceStax.Extensions.TraceStaxBackgroundService.ExecuteJobAsync(System.Threading.CancellationToken)"/>.</param>
+        </member>
+        <member name="M:TraceStax.Extensions.TraceStaxPeriodicBackgroundService.ExecuteAsync(System.Threading.CancellationToken)">
+            <inheritdoc />
+            <remarks>
+            Waits for the next timer tick before each invocation so that the
+            interval is honoured regardless of how long <see cref="M:TraceStax.Extensions.TraceStaxBackgroundService.ExecuteJobAsync(System.Threading.CancellationToken)"/> takes.
+            </remarks>
+        </member>
+        <member name="T:TraceStax.Extensions.TraceStaxServiceCollectionExtensions">
+            <summary>
+            Extension methods for registering TraceStax services in the .NET dependency
+            injection container.
+            </summary>
+        </member>
+        <member name="M:TraceStax.Extensions.TraceStaxServiceCollectionExtensions.AddTraceStax(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String,System.String)">
+            <summary>
+            Registers a <see cref="T:TraceStax.TraceStaxClient"/> singleton in the service collection.
+            </summary>
+            <param name="services">The service collection to add to.</param>
+            <param name="apiKey">TraceStax API key.</param>
+            <param name="endpoint">
+            Optional base URL of the TraceStax ingest service.  When <c>null</c> the
+            default production endpoint (<c>https://ingest.tracestax.com</c>) is used.
+            </param>
+            <returns>The same <paramref name="services"/> instance for fluent chaining.</returns>
+            <example>
+            <code>
+            builder.Services.AddTraceStax(
+                apiKey: builder.Configuration["TraceStax:ApiKey"]!,
+                endpoint: builder.Configuration["TraceStax:Endpoint"]);
+            </code>
+            </example>
+        </member>
+        <member name="T:TraceStax.Hangfire.TraceStaxJobFilter">
+            <summary>
+            Hangfire server filter that automatically records job lifecycle events to
+            TraceStax.
+            </summary>
+            <remarks>
+            Register once during application startup:
+            <code>
+            GlobalJobFilters.Filters.Add(new TraceStaxJobFilter(client));
+            </code>
+            </remarks>
+        </member>
+        <member name="M:TraceStax.Hangfire.TraceStaxJobFilter.#ctor(TraceStax.TraceStaxClient)">
+            <summary>
+            Creates a new <see cref="T:TraceStax.Hangfire.TraceStaxJobFilter"/>.
+            </summary>
+            <param name="client">Configured <see cref="T:TraceStax.TraceStaxClient"/> instance.</param>
+        </member>
+        <member name="M:TraceStax.Hangfire.TraceStaxJobFilter.OnPerforming(Hangfire.Server.PerformingContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:TraceStax.Hangfire.TraceStaxJobFilter.OnPerformed(Hangfire.Server.PerformedContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:TraceStax.Hangfire.TraceStaxJobFilter.OnStateElection(Hangfire.States.ElectStateContext)">
+            <inheritdoc />
+        </member>
+        <member name="T:TraceStax.MassTransit.TraceStaxConsumeObserver">
+            <summary>
+            MassTransit consume observer that automatically records message consumption
+            lifecycle events to TraceStax.
+            </summary>
+            <remarks>
+            Register during application startup, after building the bus:
+            <code>
+            busControl.ConnectConsumeObserver(new TraceStaxConsumeObserver(client));
+            </code>
+            Or use the convenience extension method:
+            <code>
+            busControl.AddTraceStax(client);
+            </code>
+            </remarks>
+        </member>
+        <member name="M:TraceStax.MassTransit.TraceStaxConsumeObserver.#ctor(TraceStax.TraceStaxClient)">
+            <summary>
+            Creates a new <see cref="T:TraceStax.MassTransit.TraceStaxConsumeObserver"/>.
+            </summary>
+            <param name="client">Configured <see cref="T:TraceStax.TraceStaxClient"/> instance.</param>
+        </member>
+        <member name="M:TraceStax.MassTransit.TraceStaxConsumeObserver.PreConsume``1(MassTransit.ConsumeContext{``0})">
+            <inheritdoc />
+            <remarks>
+            Records the wall-clock start time and fires a <c>TrackStart</c> event.
+            The run ID reported to TraceStax is the message's CorrelationId when
+            present, otherwise a newly generated GUID.  The entry is keyed by
+            <c>MessageId</c> (always set by MassTransit) so that the same run ID is
+            used across all three lifecycle callbacks even when no CorrelationId is
+            present.
+            </remarks>
+        </member>
+        <member name="M:TraceStax.MassTransit.TraceStaxConsumeObserver.PostConsume``1(MassTransit.ConsumeContext{``0})">
+            <inheritdoc />
+            <remarks>Fires a <c>TrackSuccess</c> event with the elapsed duration.</remarks>
+        </member>
+        <member name="M:TraceStax.MassTransit.TraceStaxConsumeObserver.ConsumeFault``1(MassTransit.ConsumeContext{``0},System.Exception)">
+            <inheritdoc />
+            <remarks>Fires a <c>TrackFailure</c> event with the elapsed duration and the fault exception.</remarks>
+        </member>
+        <member name="M:TraceStax.MassTransit.TraceStaxConsumeObserver.DequeueInflight``1(MassTransit.ConsumeContext{``0})">
+            <summary>
+            Looks up the in-flight entry for the message identified by
+            <c>MessageId</c>, removes it from the dictionary, and returns the
+            (runId, elapsedMs) pair.  If the entry is not found (e.g. because
+            <c>PreConsume</c> was not called) a fallback run ID and zero duration
+            are returned.
+            </summary>
+        </member>
+        <member name="M:TraceStax.MassTransit.TraceStaxConsumeObserver.ResolveQueueName``1(MassTransit.ConsumeContext{``0})">
+            <summary>
+            Derives a human-readable queue name from the last non-empty path segment
+            of the receive endpoint's input address, e.g.
+            <c>rabbitmq://localhost/order-created</c> → <c>order-created</c>.
+            Falls back to the full absolute path when no segment can be extracted.
+            </summary>
+        </member>
+        <member name="T:TraceStax.MassTransit.TraceStaxMassTransitExtensions">
+            <summary>
+            Extension methods for integrating TraceStax with MassTransit.
+            </summary>
+        </member>
+        <member name="M:TraceStax.MassTransit.TraceStaxMassTransitExtensions.AddTraceStax(MassTransit.IBusControl,TraceStax.TraceStaxClient)">
+            <summary>
+            Attaches a <see cref="T:TraceStax.MassTransit.TraceStaxConsumeObserver"/> to the bus control so
+            that all message consumption events are automatically tracked in TraceStax.
+            </summary>
+            <param name="busControl">The MassTransit bus control instance.</param>
+            <param name="client">Configured <see cref="T:TraceStax.TraceStaxClient"/> instance.</param>
+            <returns>
+            The same <paramref name="busControl"/> instance to allow fluent chaining.
+            </returns>
+            <example>
+            <code>
+            var busControl = Bus.Factory.CreateUsingRabbitMq(cfg => { ... });
+            busControl.AddTraceStax(tracestaxClient);
+            await busControl.StartAsync();
+            </code>
+            </example>
+        </member>
+        <member name="T:TraceStax.TraceStaxClient">
+             <summary>
+             Core TraceStax client. All network calls are fire-and-forget — exceptions are
+             swallowed silently so instrumentation can never destabilise the host process.
+            
+             Resilience features:
+             - Circuit breaker: 3 consecutive failures → OPEN (silent drop) → 30 s cooldown
+             - X-Retry-After header support
+             - Backpressure directive from heartbeat response
+             - Thread dump capture via Environment.StackTrace / StackTrace class
+             </summary>
+        </member>
+        <member name="F:TraceStax.TraceStaxClient._dispatchDelayMs">
+            <summary>
+            Grows exponentially on consecutive failures (up to 60 s), halves on success.
+            Applied as a pre-dispatch delay inside FireAndForget tasks.
+            </summary>
+        </member>
+        <member name="F:TraceStax.TraceStaxClient._pendingTasks">
+            <summary>Stores job identity (jobType, queue) from TrackStart so success/failure events reuse it.</summary>
+        </member>
+        <member name="M:TraceStax.TraceStaxClient.#ctor(System.String,System.String,System.Nullable{System.Boolean},System.Nullable{System.Boolean})">
+            <summary>
+            Creates a new <see cref="T:TraceStax.TraceStaxClient"/>.
+            </summary>
+        </member>
+        <member name="M:TraceStax.TraceStaxClient.TrackStart(System.String,System.String,System.String)">
+            <summary>
+            Records that a job has started. Fire-and-forget.
+            </summary>
+        </member>
+        <member name="M:TraceStax.TraceStaxClient.TrackSuccess(System.String,System.Int64)">
+            <summary>
+            Records that a job completed successfully. Fire-and-forget.
+            </summary>
+        </member>
+        <member name="M:TraceStax.TraceStaxClient.TrackFailure(System.String,System.Int64,System.Exception)">
+            <summary>
+            Records that a job failed. Fire-and-forget.
+            </summary>
+        </member>
+        <member name="M:TraceStax.TraceStaxClient.HeartbeatAsync(System.String,System.String[],System.Nullable{System.Int32})">
+            <summary>
+            Sends a worker heartbeat synchronously and returns the server directives, or null on error.
+            </summary>
+        </member>
+        <member name="M:TraceStax.TraceStaxClient.Heartbeat(System.String,System.String[],System.Nullable{System.Int32})">
+            <summary>
+            Fire-and-forget heartbeat (backwards-compatible; directives ignored).
+            </summary>
+        </member>
+        <member name="M:TraceStax.TraceStaxClient.SetPauseUntil(System.Int64)">
+            <summary>
+            Pauses ingest delivery until the given epoch millisecond timestamp.
+            </summary>
+        </member>
+        <member name="M:TraceStax.TraceStaxClient.ExecuteCommand(TraceStax.HeartbeatCommand)">
+            <summary>
+            Executes a server-issued command. Currently supports "thread_dump".
+            </summary>
+        </member>
+        <member name="M:TraceStax.TraceStaxClient.Snapshot(System.String,System.Int32,System.Nullable{System.Int32},System.Nullable{System.Int32})">
+            <summary>
+            Sends a queue-depth snapshot. Fire-and-forget.
+            </summary>
+        </member>
+        <member name="M:TraceStax.TraceStaxClient.CloseAsync(System.Nullable{System.TimeSpan})">
+            <summary>
+            Waits for any in-flight fire-and-forget tasks to complete, up to
+            <paramref name="timeout"/>. A slow or unreachable server cannot hang the
+            host process beyond this deadline.
+            </summary>
+        </member>
+        <member name="M:TraceStax.TraceStaxClient.GetStats">
+            <summary>
+            Returns a snapshot of the client's internal health metrics.
+            </summary>
+        </member>
+        <member name="T:TraceStax.HeartbeatDirectives">
+            <summary>Directives returned by the server in the heartbeat response.</summary>
+        </member>
+        <member name="M:TraceStax.HeartbeatDirectives.#ctor(System.Boolean,System.Nullable{System.Int64},System.Collections.Generic.IReadOnlyList{TraceStax.HeartbeatCommand})">
+            <summary>Directives returned by the server in the heartbeat response.</summary>
+        </member>
+        <member name="T:TraceStax.HeartbeatCommand">
+            <summary>A single server-issued command.</summary>
+        </member>
+        <member name="M:TraceStax.HeartbeatCommand.#ctor(System.String,System.String)">
+            <summary>A single server-issued command.</summary>
+        </member>
+        <member name="T:TraceStax.ClientStats">
+            <summary>Snapshot of SDK health metrics, returned by <see cref="M:TraceStax.TraceStaxClient.GetStats"/>.</summary>
+        </member>
+        <member name="M:TraceStax.ClientStats.#ctor(System.Int32,System.Int64,System.String,System.Int32)">
+            <summary>Snapshot of SDK health metrics, returned by <see cref="M:TraceStax.TraceStaxClient.GetStats"/>.</summary>
+        </member>
+    </members>
+</doc>
