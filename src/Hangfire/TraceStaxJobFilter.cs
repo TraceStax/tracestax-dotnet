@@ -128,9 +128,9 @@ public sealed class TraceStaxJobFilter : IServerFilter, IElectStateFilter
             if (int.TryParse(raw, out int retries))
                 return retries + 1; // convert 0-based retry count to 1-based attempt
         }
-        catch (Exception)
+        catch (Exception) // codeql[cs/catch-of-base-type]
         {
-            // Swallow — this is best-effort metadata.
+            // Swallow - this is best-effort metadata.
         }
 
         return 1;
@@ -145,7 +145,7 @@ public sealed class TraceStaxJobFilter : IServerFilter, IElectStateFilter
             return context.Connection
                 .GetJobParameter(context.BackgroundJob.Id, "Queue");
         }
-        catch (Exception)
+        catch (Exception) // codeql[cs/catch-of-base-type]
         {
             return null;
         }

@@ -336,8 +336,9 @@ public sealed class TraceStaxClient
             }
             return new HeartbeatDirectives(false, null, []);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Console.Error.WriteLine($"[tracestax] heartbeat parse failed: {ex.GetType().Name}: {ex.Message}");
             RecordFailure();
             return null;
         }

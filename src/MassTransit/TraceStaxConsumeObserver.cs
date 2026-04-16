@@ -146,7 +146,7 @@ public sealed class TraceStaxConsumeObserver : IConsumeObserver
 
             return path.Length > 0 ? path : address.Host;
         }
-        catch (Exception)
+        catch (Exception) // codeql[cs/catch-of-base-type]
         {
             return "default";
         }

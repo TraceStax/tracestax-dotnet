@@ -33,7 +33,7 @@ public class ResilienceTests
 
     /// <summary>
     /// Start a local HTTP listener on an OS-assigned port and return its URL.
-    /// The caller is responsible for calling <c>listener.Stop()</c>.
+    /// The caller is responsible for calling <c>listener.Close()</c>.
     /// </summary>
     private static (HttpListener listener, string url) StartListener()
     {
@@ -49,7 +49,7 @@ public class ResilienceTests
 
     /// <summary>
     /// Returns a <see cref="Task"/> that handles <paramref name="count"/> requests
-    /// by responding with the given status code, then stops the listener.
+    /// by responding with the given status code, then closes the listener.
     /// Counts actual hits into <paramref name="hitCount"/>.
     /// </summary>
     private static Task ServeAsync(
@@ -70,7 +70,7 @@ public class ResilienceTests
                 ctx.Response.StatusCode = statusCode;
                 ctx.Response.OutputStream.Close();
             }
-            listener.Stop();
+            listener.Close();
         });
     }
 
@@ -302,7 +302,7 @@ public class ResilienceTests
         await Task.Delay(500);
         Assert.Equal(2, hits2.Count); // second request made
 
-        listener2.Stop();
+        await serve2; // ServeAsync calls Close() after serving
     }
 
     /// <summary>

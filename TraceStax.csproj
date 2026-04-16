@@ -8,7 +8,7 @@
 
     <!-- Package metadata -->
     <PackageId>TraceStax</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>TraceStax</Authors>
     <Description>Official .NET SDK for TraceStax — Worker Intelligence Platform. Collects job/task lifecycle events from background job frameworks.</Description>
     <PackageTags>tracestax;worker;monitoring;hangfire;background-jobs;observability</PackageTags>
@@ -49,10 +49,10 @@
   -->
   <ItemGroup>
     <!-- Hangfire.Core provides IServerFilter / IElectStateFilter -->
-    <PackageReference Include="Hangfire.Core" Version="1.8.0" />
+    <PackageReference Include="Hangfire.Core" Version="1.8.20" />
 
     <!-- MassTransit provides IConsumeObserver / IBusControl -->
-    <PackageReference Include="MassTransit" Version="8.2.1" />
+    <PackageReference Include="MassTransit" Version="8.3.6" />
 
     <!-- Microsoft.Extensions.Hosting.Abstractions provides BackgroundService / IHostedService -->
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
