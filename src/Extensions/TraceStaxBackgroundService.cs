@@ -87,14 +87,16 @@ public abstract class TraceStaxBackgroundService : BackgroundService
             TraceStaxClient.TrackFailure(runId, durationMs);
             throw;
         }
+#pragma warning disable CA1031 // codeql[cs/catch-of-base-type] - intentional: background service must never crash
         catch (Exception ex)
         {
             long durationMs = Math.Max(0L, Environment.TickCount64 - startTick);
             TraceStaxClient.TrackFailure(runId, durationMs, ex);
-            // Do not re-throw non-cancellation exceptions by default — a single
+            // Do not re-throw non-cancellation exceptions by default - a single
             // failing tick should not bring down the entire service.  Derived
             // classes that want different behaviour can override ExecuteAsync.
         }
+#pragma warning restore CA1031
     }
 }
 

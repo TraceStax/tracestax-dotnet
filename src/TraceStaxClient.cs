@@ -287,11 +287,8 @@ public sealed class TraceStaxClient
                 .ConfigureAwait(false);
 
             // Honor X-Retry-After
-            if (response.Headers.TryGetValues("X-Retry-After", out var raValues))
-            {
-                if (int.TryParse(raValues.FirstOrDefault(), out int secs) && secs > 0)
-                    SetPauseUntil(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + secs * 1_000L);
-            }
+            if (response.Headers.TryGetValues("X-Retry-After", out var raValues) && int.TryParse(raValues.FirstOrDefault(), out int secs) && secs > 0)
+                SetPauseUntil(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + secs * 1_000L);
 
             if ((int)response.StatusCode == 401)
             {
@@ -336,7 +333,19 @@ public sealed class TraceStaxClient
             }
             return new HeartbeatDirectives(false, null, []);
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
+        {
+            Console.Error.WriteLine($"[tracestax] heartbeat parse failed: {ex.GetType().Name}: {ex.Message}");
+            RecordFailure();
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Console.Error.WriteLine($"[tracestax] heartbeat parse failed: {ex.GetType().Name}: {ex.Message}");
+            RecordFailure();
+            return null;
+        }
+        catch (TaskCanceledException ex)
         {
             Console.Error.WriteLine($"[tracestax] heartbeat parse failed: {ex.GetType().Name}: {ex.Message}");
             RecordFailure();
@@ -393,11 +402,8 @@ public sealed class TraceStaxClient
                     .ConfigureAwait(false);
 
                 // Honor X-Retry-After on ingest responses too
-                if (response.Headers.TryGetValues("X-Retry-After", out var raValues))
-                {
-                    if (int.TryParse(raValues.FirstOrDefault(), out int secs) && secs > 0)
-                        SetPauseUntil(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + secs * 1_000L);
-                }
+                if (response.Headers.TryGetValues("X-Retry-After", out var raValues) && int.TryParse(raValues.FirstOrDefault(), out int secs) && secs > 0)
+                    SetPauseUntil(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + secs * 1_000L);
 
                 if (response.IsSuccessStatusCode) RecordSuccess();
                 else if ((int)response.StatusCode == 401)
@@ -406,7 +412,17 @@ public sealed class TraceStaxClient
                     Console.Error.WriteLine("[tracestax] Auth failed (401) – check your API key.");
                 else RecordFailure();
             }
-            catch (Exception ex)
+            catch (HttpRequestException ex)
+            {
+                Console.Error.WriteLine($"[tracestax] dispatch failed: {ex.GetType().Name}: {ex.Message}");
+                RecordFailure();
+            }
+            catch (JsonException ex)
+            {
+                Console.Error.WriteLine($"[tracestax] dispatch failed: {ex.GetType().Name}: {ex.Message}");
+                RecordFailure();
+            }
+            catch (TaskCanceledException ex)
             {
                 Console.Error.WriteLine($"[tracestax] dispatch failed: {ex.GetType().Name}: {ex.Message}");
                 RecordFailure();
@@ -469,7 +485,7 @@ public sealed class TraceStaxClient
         sb.AppendLine($"Timestamp: {DateTimeOffset.UtcNow:O}");
         sb.AppendLine();
         sb.AppendLine("=== Current Thread Stack ===");
-        sb.AppendLine(new StackTrace(true).ToString());
+        sb.AppendLine($"{new StackTrace(true)}");
         var result = sb.ToString();
         return result.Length > 500_000 ? result[..500_000] : result;
     }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -64,7 +65,7 @@ public class ResilienceTests
             {
                 HttpListenerContext ctx;
                 try { ctx = await listener.GetContextAsync(); }
-                catch (Exception) { break; }
+                catch (ObjectDisposedException) { break; }
 
                 hitCount.Enqueue(1);
                 ctx.Response.StatusCode = statusCode;
@@ -210,7 +211,7 @@ public class ResilienceTests
             try   { throw jobError; }
             finally { client.TrackFailure("run-crash", durationMs: 1, ex: jobError); }
         }
-        catch (Exception ex) { caught = ex; }
+        catch (InvalidOperationException ex) { caught = ex; }
 
         Assert.Same(jobError, caught);
     }
@@ -245,9 +246,9 @@ public class ResilienceTests
         Assert.Equal(1, GetCircuitStateInt(client));
 
         // 4th call must be dropped — restart listener to detect any new request
-        var (listener2, _url2) = StartListener();
-        var extra              = new ConcurrentQueue<int>();
-        var extraTask          = ServeAsync(listener2, 1, 200, extra);
+        var (listener2, _) = StartListener();
+        var extra          = new ConcurrentQueue<int>();
+        _ = ServeAsync(listener2, 1, 200, extra);
 
         client.TrackStart("r4-dropped", "Job", "q");
         await Task.Delay(200);
@@ -321,7 +322,7 @@ public class ResilienceTests
             {
                 HttpListenerContext ctx;
                 try { ctx = await listener.GetContextAsync(); }
-                catch (Exception) { break; }
+                catch (ObjectDisposedException) { break; }
                 hits.Enqueue(1);
                 ctx.Response.StatusCode = 503;
                 ctx.Response.OutputStream.Close();
@@ -448,7 +449,11 @@ public class ResilienceTests
                         client.TrackSuccess($"run-{idx}-{i}", i * 10L);
                     }
                 }
-                catch (Exception ex)
+                catch (HttpRequestException ex)
+                {
+                    errors.Enqueue(ex);
+                }
+                catch (InvalidOperationException ex)
                 {
                     errors.Enqueue(ex);
                 }
