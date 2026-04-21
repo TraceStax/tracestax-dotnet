@@ -49,10 +49,10 @@
   -->
   <ItemGroup>
     <!-- Hangfire.Core provides IServerFilter / IElectStateFilter -->
-    <PackageReference Include="Hangfire.Core" Version="1.8.20" />
+    <PackageReference Include="Hangfire.Core" Version="1.8.23" />
 
     <!-- MassTransit provides IConsumeObserver / IBusControl -->
-    <PackageReference Include="MassTransit" Version="8.3.6" />
+    <PackageReference Include="MassTransit" Version="9.1.0" />
 
     <!-- Microsoft.Extensions.Hosting.Abstractions provides BackgroundService / IHostedService -->
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
